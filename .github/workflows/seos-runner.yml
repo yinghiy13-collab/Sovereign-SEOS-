@@ -49,6 +49,8 @@ jobs:
         run: |
           echo "Actor: ${{ github.actor }}"
           echo "Ref: ${{ github.ref_name }}"
+          echo "Workflow Ref: ${{ github.workflow_ref }}"
+          echo "Command: ${{ inputs.command || 'self (auto)' }}"
           echo "Event: ${{ github.event_name }}"
           echo "Commit: ${{ github.sha }}"
 
@@ -58,22 +60,21 @@ jobs:
           CMD="${{ inputs.command || 'self' }}"
           python3 "seos.py" "$CMD"
 
-      # 🔥 NEW: Vulnerability Scanner (Trivy)
+      # 🛡️ Phase 2: Vulnerability Scanner (Trivy)
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # v0.28.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
           format: 'table'
-          exit-code: '1' # ถ้าเจอช่องโหว่ระดับ HIGH/CRITICAL ให้หยุดการทำงานทันที
+          exit-code: '1' # ถ้าเจอช่องโหว่ระดับ HIGH/CRITICAL ให้หยุดการทำงานทันที (Fail)
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 
       - name: Generate attestation
         id: attest
-        # จะรันเฉพาะเมื่อ Self-test ผ่าน (Trivy ผ่านไปแล้วโดยปริยาย เพราะถ้าไม่ผ่าน มันจะหยุดไปก่อน)
-        if: steps.run.outcome == 'success' 
+        if: steps.run.outcome == 'success'
         run: |
           python3 seos.py attest
 
@@ -99,6 +100,7 @@ jobs:
           echo "✅ Signature is valid and verified!"
 
       - name: Native GitHub attestation
+        # รันเฉพาะตอน Push หรือ Schedule ไม่รันตอนทำ PR (เพราะโค้ดยังไม่ถูก merge)
         if: ${{ !github.event.repository.private && steps.attest.outcome == 'success' && github.event_name != 'pull_request' }}
         uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1.4.4
         with:
