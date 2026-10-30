@@ -57,29 +57,29 @@ jobs:
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
 
       - name: Generate attestation
+        id: attest
         if: inputs.command == 'attest' || inputs.command == 'self' || github.event_name == 'push'
         run: python3 seos.py attest
 
-      # --- ปลดล็อกให้ Cosign ทำงานอัตโนมัติ ---
+      # ----------------- แก้ไขตรงนี้ -----------------
       - name: Install cosign
-        if: hashFiles('attestation.json') != ''
+        if: steps.attest.outcome == 'success'
         uses: sigstore/cosign-installer@v3
 
       - name: Sign attestation (keyless)
-        if: hashFiles('attestation.json') != ''
+        if: steps.attest.outcome == 'success'
         run: |
           cosign sign-blob --yes attestation.json \
             --bundle attestation.sigstore.json
 
-      # --- ใช้ Option 2: ข้ามขั้นตอนนี้ถ้าเป็น Private Repo ---
       - name: Native GitHub attestation
-        if: ${{ !github.event.repository.private && hashFiles('attestation.json') != '' }}
+        if: ${{ !github.event.repository.private && steps.attest.outcome == 'success' }}
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: 'attestation.json'
 
       - name: Upload artifacts
-        if: hashFiles('attestation.json') != ''
+        if: steps.attest.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: seos-attestation-${{ github.sha }}
@@ -87,7 +87,8 @@ jobs:
             attestation.json
             attestation.sigstore.json
           retention-days: 90
-          if-no-files-found: warn
+          if-no-files-found: error
+      # ---------------------------------------------
 
       - name: Job summary
         if: always()
@@ -100,5 +101,5 @@ jobs:
             echo "| Status | ${{ steps.run.outcome }} |"
             echo "| Commit | \`${{ github.sha }}\` |"
             echo "| Trigger | ${{ github.event_name }} |"
-            echo "| Attestation | ${{ hashFiles('attestation.json') != '' && '✅ generated' || '—' }} |"
+            echo "| Attestation | ${{ steps.attest.outcome == 'success' && '✅ generated' || '—' }} |"
           } >> "$GITHUB_STEP_SUMMARY"
