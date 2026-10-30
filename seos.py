@@ -275,11 +275,12 @@ class Ledger:
 
 def make_demo_evidence() -> List[Evidence]:
     return [
-        Evidence("E1", "SECURITY",     "SAST scan",   "ci",   sha256_str("sast"), .95),
-        Evidence("E2", "COMPLIANCE",   "SBOM",        "ci",   sha256_str("sbom"), .99),
-        Evidence("E3", "TEST",         "Unit tests",  "ci",   sha256_str("unit"), .92),
-        Evidence("E4", "TEST",         "Integration", "ci",   sha256_str("int"),  .88),
-        Evidence("E5", "ARCHITECTURE", "ADR-001",     "repo", sha256_str("adr"),  1.00),
+        # แก้ไขโดยการระบุชื่อ argument ชัดเจน: confidence=...
+        Evidence("E1", "SECURITY",     "SAST scan",   "ci",   sha256_str("sast"), confidence=.95),
+        Evidence("E2", "COMPLIANCE",   "SBOM",        "ci",   sha256_str("sbom"), confidence=.99),
+        Evidence("E3", "TEST",         "Unit tests",  "ci",   sha256_str("unit"), confidence=.92),
+        Evidence("E4", "TEST",         "Integration", "ci",   sha256_str("int"),  confidence=.88),
+        Evidence("E5", "ARCHITECTURE", "ADR-001",     "repo", sha256_str("adr"),  confidence=1.00),
     ]
 
 def make_approvals(full: bool = True) -> List[Dict]:
@@ -524,7 +525,6 @@ def self_test():
     return 0 if passed == len(tests) else 1
 
 def attest():
-    """Generate SLSA-style attestation JSON. Exit 0 = pass."""
     buf = io.StringIO()
     with redirect_stdout(buf):
         rc = self_test()
