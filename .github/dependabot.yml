@@ -1,6 +1,5 @@
 version: 2
 updates:
-  # ตรวจสอบและอัปเดต GitHub Actions (ที่เราปักหมุด SHA ไว้)
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
