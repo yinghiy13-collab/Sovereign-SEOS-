@@ -62,7 +62,7 @@ jobs:
 
       - name: Generate attestation
         id: attest
-        if: inputs.command == 'attest' || inputs.command == 'self' || github.event_name == 'push'
+        if: inputs.command == 'attest' || inputs.command == 'self' || github.event_name == 'push' || github.event_name == 'schedule'
         run: |
           python3 seos.py attest
 
@@ -88,7 +88,7 @@ jobs:
           echo "✅ Signature is valid and verified!"
 
       - name: Native GitHub attestation
-        if: ${ { !github.event.repository.private && steps.attest.outcome == 'success' } }
+        if: ${{ !github.event.repository.private && steps.attest.outcome == 'success' }}
         uses: actions/attest-build-provenance@v1
         with:
           subject-path: 'attestation.json'
