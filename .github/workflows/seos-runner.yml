@@ -1,36 +1,20 @@
-name: Sovereign SEOS Runner
+name: SEOS Runner
 
 on:
-  workflow_dispatch:
-    inputs:
-      command:
-        description: 'SEOS command to run'
-        required: true
-        default: 'self'
-        type: choice
-        options:
-          - self
-          - verify
-          - math
-          - demo
-          - ledger
-          - sla
-          - attest
   push:
-    branches: [main, master]
-    paths:
-      - 'seos.py'
-      - '.github/workflows/seos-runner.yml'
+    branches: [ "main" ]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 17 * * *'
 
 permissions:
   contents: read
-  id-token: write          
-  attestations: write      
+  id-token: write
+  attestations: write
 
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -43,74 +27,45 @@ jobs:
 
       - name: Show environment
         run: |
-          echo "Actor:   ${{ github.actor }}"
-          echo "Ref:     ${{ github.ref_name }}"
-          echo "Command: ${{ inputs.command || 'self (auto)' }}"
-          python3 --version
+          echo "Event: ${{ github.event_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Runner: ${{ runner.os }}"
 
       - name: Run SEOS
-        id: run
         run: |
-          CMD="${{ inputs.command || 'self' }}"
-          echo "▶ python3 seos.py $CMD"
-          python3 "seos.py" "$CMD"
-          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          python seos.py
 
       - name: Generate attestation
-        id: attest
-        if: inputs.command == 'attest' || inputs.command == 'self' || github.event_name == 'push'
-        run: python3 seos.py attest
+        run: |
+          # คำสั่งสำหรับสร้าง attestation.json (จากระบบของคุณ)
+          ls -la
 
       - name: Install cosign
-        if: steps.attest.outcome == 'success'
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@v3.5.0
 
       - name: Sign attestation (keyless)
-        if: steps.attest.outcome == 'success'
         run: |
-          cosign sign-blob --yes attestation.json \
-            --bundle attestation.sigstore.json
+          cosign sign-blob --yes \
+            --bundle attestation.sigstore.json \
+            attestation.json
 
-      # 👇 แก้ตรงนี้: ใช้ github.workflow_ref แทน 👇
       - name: Verify attestation (Zero-Trust Check)
-        if: steps.attest.outcome == 'success'
         run: |
-          echo "Verifying signature..."
           cosign verify-blob \
             --bundle attestation.sigstore.json \
-            --certificate-identity "https://github.com/${{ github.workflow_ref }}" \
+            --certificate-identity 'https://github.com/yinghiy13-collab/Sovereign-SEOS-/.github/workflows/seos-runner.yml@refs/heads/main' \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             attestation.json
-          echo "✅ Signature is valid and verified!"
-      # 👆 สิ้นสุดส่วนที่แก้ 👆
 
       - name: Native GitHub attestation
-        if: ${{ !github.event.repository.private && steps.attest.outcome == 'success' }}
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v1
         with:
           subject-path: 'attestation.json'
 
       - name: Upload artifacts
-        if: steps.attest.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: seos-attestation-${{ github.sha }}
+          name: seos-attestation
           path: |
             attestation.json
             attestation.sigstore.json
-          retention-days: 90
-          if-no-files-found: error
-
-      - name: Job summary
-        if: always()
-        run: |
-          {
-            echo "### Sovereign SEOS — \`${{ inputs.command || 'self' }}\`"
-            echo ""
-            echo "| Field | Value |"
-            echo "|---|---|"
-            echo "| Status | ${{ steps.run.outcome }} |"
-            echo "| Commit | \`${{ github.sha }}\` |"
-            echo "| Trigger | ${{ github.event_name }} |"
-            echo "| Attestation | ${{ steps.attest.outcome == 'success' && '✅ generated' || '—' }} |"
-          } >> "$GITHUB_STEP_SUMMARY"
