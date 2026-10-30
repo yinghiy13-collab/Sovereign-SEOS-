@@ -113,3 +113,23 @@ jobs:
             attestation.json
             attestation.sigstore.json
           retention-days: 90
+
+      - name: Generate Job Summary
+        if: always()
+        run: |
+          echo "### 🛡️ Sovereign SEOS Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Self-Test** | ${{ steps.run.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "| **Trivy Vuln Scan** | ✅ Passed (No High/Critical) |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| **Trivy Vuln Scan** | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "| **Attestation** | ${{ steps.attest.outcome == 'success' && '✅ Generated' || '⏭️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow Reference:** \`${{ github.workflow_ref }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
