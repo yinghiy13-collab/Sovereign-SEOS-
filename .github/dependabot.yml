@@ -1,13 +1,14 @@
 version: 2
 updates:
-  # ตรวจสอบ GitHub Actions ให้อัปเดต Commit SHA อัตโนมัติ
+  # ตรวจสอบและอัปเดต GitHub Actions (ที่เราปักหมุด SHA ไว้) ให้เป็นเวอร์ชันที่ปลอดภัยที่สุด
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     commit-message:
       prefix: "deps(actions)"
-  # ตรวจสอบ Python dependencies (ถ้ามีในอนาคต)
+      
+  # ตรวจสอบ Dependencies ของ Python (ถ้ามีการใช้ requirements.txt ในอนาคต)
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
