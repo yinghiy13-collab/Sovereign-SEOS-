@@ -60,14 +60,13 @@ jobs:
           CMD="${{ inputs.command || 'self' }}"
           python3 "seos.py" "$CMD"
 
-      # 🛡️ Phase 2: Vulnerability Scanner (Trivy) - อัปเดตเวอร์ชันแก้บั๊กแล้ว
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
           format: 'table'
-          exit-code: '1' # ถ้าเจอช่องโหว่ระดับ HIGH/CRITICAL ให้หยุดการทำงานทันที (Fail)
+          exit-code: '1'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
