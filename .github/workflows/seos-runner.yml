@@ -21,11 +21,13 @@ on:
     paths:
       - 'seos.py'
       - '.github/workflows/seos-runner.yml'
+  schedule:
+    - cron: '0 17 * * *'
 
 permissions:
   contents: read
-  id-token: write          
-  attestations: write      
+  id-token: write
+  attestations: write
 
 jobs:
   run:
@@ -43,9 +45,11 @@ jobs:
 
       - name: Show environment
         run: |
-          echo "Actor:   ${{ github.actor }}"
-          echo "Ref:     ${{ github.ref_name }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Ref: ${{ github.ref_name }}"
           echo "Command: ${{ inputs.command || 'self (auto)' }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "Commit: ${{ github.sha }}"
           python3 --version
 
       - name: Run SEOS
@@ -59,11 +63,12 @@ jobs:
       - name: Generate attestation
         id: attest
         if: inputs.command == 'attest' || inputs.command == 'self' || github.event_name == 'push'
-        run: python3 seos.py attest
+        run: |
+          python3 seos.py attest
 
       - name: Install cosign
         if: steps.attest.outcome == 'success'
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@v3.5.0
 
       - name: Sign attestation (keyless)
         if: steps.attest.outcome == 'success'
@@ -71,22 +76,20 @@ jobs:
           cosign sign-blob --yes attestation.json \
             --bundle attestation.sigstore.json
 
-      # 👇 แก้ตรงนี้: ใช้ github.workflow_ref แทน 👇
       - name: Verify attestation (Zero-Trust Check)
         if: steps.attest.outcome == 'success'
         run: |
           echo "Verifying signature..."
           cosign verify-blob \
             --bundle attestation.sigstore.json \
-            --certificate-identity "https://github.com/${{ github.workflow_ref }}" \
+            --certificate-identity 'https://github.com/yinghiy13-collab/Sovereign-SEOS-/.github/workflows/seos-runner.yml@refs/heads/main' \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             attestation.json
           echo "✅ Signature is valid and verified!"
-      # 👆 สิ้นสุดส่วนที่แก้ 👆
 
       - name: Native GitHub attestation
-        if: ${{ !github.event.repository.private && steps.attest.outcome == 'success' }}
-        uses: actions/attest-build-provenance@v2
+        if: ${ { !github.event.repository.private && steps.attest.outcome == 'success' } }
+        uses: actions/attest-build-provenance@v1
         with:
           subject-path: 'attestation.json'
 
@@ -99,18 +102,3 @@ jobs:
             attestation.json
             attestation.sigstore.json
           retention-days: 90
-          if-no-files-found: error
-
-      - name: Job summary
-        if: always()
-        run: |
-          {
-            echo "### Sovereign SEOS — \`${{ inputs.command || 'self' }}\`"
-            echo ""
-            echo "| Field | Value |"
-            echo "|---|---|"
-            echo "| Status | ${{ steps.run.outcome }} |"
-            echo "| Commit | \`${{ github.sha }}\` |"
-            echo "| Trigger | ${{ github.event_name }} |"
-            echo "| Attestation | ${{ steps.attest.outcome == 'success' && '✅ generated' || '—' }} |"
-          } >> "$GITHUB_STEP_SUMMARY"
