@@ -16,11 +16,6 @@ on:
           - ledger
           - sla
           - attest
-      sign_attestation:
-        description: 'Sign attestation with Sigstore (requires id-token)'
-        required: false
-        default: false
-        type: boolean
   push:
     branches: [main, master]
     paths:
@@ -29,8 +24,8 @@ on:
 
 permissions:
   contents: read
-  id-token: write          # for Sigstore keyless signing
-  attestations: write      # for native GitHub attestation
+  id-token: write          
+  attestations: write      
 
 jobs:
   run:
@@ -65,18 +60,20 @@ jobs:
         if: inputs.command == 'attest' || inputs.command == 'self' || github.event_name == 'push'
         run: python3 seos.py attest
 
+      # --- ปลดล็อกให้ Cosign ทำงานอัตโนมัติ ---
       - name: Install cosign
-        if: inputs.sign_attestation == true
+        if: hashFiles('attestation.json') != ''
         uses: sigstore/cosign-installer@v3
 
       - name: Sign attestation (keyless)
-        if: inputs.sign_attestation == true && hashFiles('attestation.json') != ''
+        if: hashFiles('attestation.json') != ''
         run: |
           cosign sign-blob --yes attestation.json \
             --bundle attestation.sigstore.json
 
+      # --- ใช้ Option 2: ข้ามขั้นตอนนี้ถ้าเป็น Private Repo ---
       - name: Native GitHub attestation
-        if: hashFiles('attestation.json') != ''
+        if: ${{ !github.event.repository.private && hashFiles('attestation.json') != '' }}
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: 'attestation.json'
