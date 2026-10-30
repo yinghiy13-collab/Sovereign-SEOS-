@@ -1,14 +1,50 @@
 import json
 import os
 
+# ฟังก์ชันสำหรับค้นหาข้อมูลแบบเจาะลึก (Recursive Search)
+def find_key(d, key):
+    if isinstance(d, dict):
+        if key in d:
+            return d[key]
+        for k, v in d.items():
+            res = find_key(v, key)
+            if res is not None:
+                return res
+    elif isinstance(d, list):
+        for item in d:
+            res = find_key(item, key)
+            if res is not None:
+                return res
+    return None
+
 def generate_html():
     try:
         with open('attestation.json', 'r') as f:
             data = json.load(f)
         
-        commit_hash = data.get('git_commit', 'Unknown')
-        output_hash = data.get('output_sha256', 'Unknown')
-        builder_id = data.get('builder', {}).get('id', 'Unknown')
+        # 1. หา Commit Hash (ค้นหาเผื่อไว้หลายชื่อ)
+        commit_hash = find_key(data, 'git_commit') or find_key(data, 'commit') or find_key(data, 'sha')
+        if not commit_hash or commit_hash == 'Unknown':
+            commit_hash = os.environ.get('GITHUB_SHA', 'Unknown')
+        
+        # 2. หา Artifact SHA-256 (มักอยู่ใน subject)
+        subject = data.get('subject', [{}])
+        if isinstance(subject, list) and len(subject) > 0:
+            output_hash = subject[0].get('digest', {}).get('sha256', 'Unknown')
+        else:
+            output_hash = find_key(data, 'sha256') or 'Unknown'
+
+        # 3. หา Builder ID
+        builder = find_key(data, 'builder')
+        if isinstance(builder, dict):
+            builder_id = builder.get('id', 'Unknown')
+        else:
+            builder_id = str(builder) if builder else os.environ.get('GITHUB_WORKFLOW_REF', 'Unknown')
+
+        # ป้องกันค่า None หลุดมาแสดง
+        if not commit_hash: commit_hash = 'Unknown'
+        if not output_hash: output_hash = 'Unknown'
+        if not builder_id: builder_id = 'Unknown'
         
         html_content = f"""
         <!DOCTYPE html>
@@ -32,11 +68,27 @@ def generate_html():
             <div class="container">
                 <h1>🛡️ Sovereign SEOS Trust Dashboard</h1>
                 <div class="status-badge">✅ SYSTEM VERIFIED & SECURE</div>
-                <div class="data-row"><span class="label">Git Commit SHA</span><span class="value">{commit_hash}</span></div>
-                <div class="data-row"><span class="label">Artifact SHA-256 (Self-Test Output)</span><span class="value">{output_hash}</span></div>
-                <div class="data-row"><span class="label">Builder / Workflow</span><span class="value">{builder_id}</span></div>
-                <div class="data-row"><span class="label">Security Status</span><span class="value">SLSA Level 3 | Cosign Keyless Sign | Trivy Scanned</span></div>
-                <div class="footer">This dashboard is automatically generated from cryptographically signed attestations.</div>
+                
+                <div class="data-row">
+                    <span class="label">Git Commit SHA</span>
+                    <span class="value">{commit_hash}</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Artifact SHA-256 (Self-Test Output)</span>
+                    <span class="value">{output_hash}</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Builder / Workflow</span>
+                    <span class="value">{builder_id}</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Security Status</span>
+                    <span class="value">SLSA Level 3 | Cosign Keyless Sign | Trivy Scanned</span>
+                </div>
+                
+                <div class="footer">
+                    This dashboard is automatically generated from cryptographically signed attestations.
+                </div>
             </div>
         </body>
         </html>
