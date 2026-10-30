@@ -61,7 +61,6 @@ jobs:
         if: inputs.command == 'attest' || inputs.command == 'self' || github.event_name == 'push'
         run: python3 seos.py attest
 
-      # ----------------- แก้ไขตรงนี้ -----------------
       - name: Install cosign
         if: steps.attest.outcome == 'success'
         uses: sigstore/cosign-installer@v3
@@ -71,6 +70,17 @@ jobs:
         run: |
           cosign sign-blob --yes attestation.json \
             --bundle attestation.sigstore.json
+
+      - name: Verify attestation (Zero-Trust Check)
+        if: steps.attest.outcome == 'success'
+        run: |
+          echo "Verifying signature..."
+          cosign verify-blob \
+            --bundle attestation.sigstore.json \
+            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/${{ github.workflow }}@refs/heads/main" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            attestation.json
+          echo "✅ Signature is valid and verified!"
 
       - name: Native GitHub attestation
         if: ${{ !github.event.repository.private && steps.attest.outcome == 'success' }}
@@ -88,7 +98,6 @@ jobs:
             attestation.sigstore.json
           retention-days: 90
           if-no-files-found: error
-      # ---------------------------------------------
 
       - name: Job summary
         if: always()
