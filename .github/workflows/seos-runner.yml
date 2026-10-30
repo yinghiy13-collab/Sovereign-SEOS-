@@ -1,0 +1,107 @@
+name: Sovereign SEOS Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'SEOS command to run'
+        required: true
+        default: 'self'
+        type: choice
+        options:
+          - self
+          - verify
+          - math
+          - demo
+          - ledger
+          - sla
+          - attest
+      sign_attestation:
+        description: 'Sign attestation with Sigstore (requires id-token)'
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches: [main, master]
+    paths:
+      - 'seos.py'
+      - '.github/workflows/seos-runner.yml'
+
+permissions:
+  contents: read
+  id-token: write          # for Sigstore keyless signing
+  attestations: write      # for native GitHub attestation
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Show environment
+        run: |
+          echo "Actor:   ${{ github.actor }}"
+          echo "Ref:     ${{ github.ref_name }}"
+          echo "Command: ${{ inputs.command || 'self (auto)' }}"
+          python3 --version
+
+      - name: Run SEOS
+        id: run
+        run: |
+          CMD="${{ inputs.command || 'self' }}"
+          echo "▶ python3 seos.py $CMD"
+          python3 "seos.py" "$CMD"
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Generate attestation
+        if: inputs.command == 'attest' || inputs.command == 'self' || github.event_name == 'push'
+        run: python3 seos.py attest
+
+      - name: Install cosign
+        if: inputs.sign_attestation == true
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign attestation (keyless)
+        if: inputs.sign_attestation == true && hashFiles('attestation.json') != ''
+        run: |
+          cosign sign-blob --yes attestation.json \
+            --bundle attestation.sigstore.json
+
+      - name: Native GitHub attestation
+        if: hashFiles('attestation.json') != ''
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'attestation.json'
+
+      - name: Upload artifacts
+        if: hashFiles('attestation.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: seos-attestation-${{ github.sha }}
+          path: |
+            attestation.json
+            attestation.sigstore.json
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "### Sovereign SEOS — \`${{ inputs.command || 'self' }}\`"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Status | ${{ steps.run.outcome }} |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Trigger | ${{ github.event_name }} |"
+            echo "| Attestation | ${{ hashFiles('attestation.json') != '' && '✅ generated' || '—' }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
