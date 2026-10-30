@@ -71,16 +71,18 @@ jobs:
           cosign sign-blob --yes attestation.json \
             --bundle attestation.sigstore.json
 
+      # 👇 แก้ตรงนี้: ใช้ github.workflow_ref แทน 👇
       - name: Verify attestation (Zero-Trust Check)
         if: steps.attest.outcome == 'success'
         run: |
           echo "Verifying signature..."
           cosign verify-blob \
             --bundle attestation.sigstore.json \
-            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/${{ github.workflow }}@refs/heads/main" \
+            --certificate-identity "https://github.com/${{ github.workflow_ref }}" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             attestation.json
           echo "✅ Signature is valid and verified!"
+      # 👆 สิ้นสุดส่วนที่แก้ 👆
 
       - name: Native GitHub attestation
         if: ${{ !github.event.repository.private && steps.attest.outcome == 'success' }}
