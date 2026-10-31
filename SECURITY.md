@@ -1,21 +1,27 @@
 # Security Policy
 
-## Supported Versions
+## Supported versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+Only the latest release is supported. Older releases do not receive fixes.
+Release v1.0.2 has no attestation; use v1.0.3 or later.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+## Scope
 
-## Reporting a Vulnerability
+This project is a small Python script with a CI pipeline that signs a record
+of its own self-test. Security reports are welcome for:
 
-Use this section to tell people how to report a vulnerability.
+- the release and runner workflows (`.github/workflows/`)
+- the attestation format and verification instructions
+- `seos.py` and `generate_dashboard.py`
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Runtime security of anything built on top of this project is out of scope.
+
+## Reporting a vulnerability
+
+Use the "Report a vulnerability" button on this repository's Security tab
+(private vulnerability reporting). Please do not open a public issue with
+details.
+
+This is maintained by one person. Expect a first reply on a best-effort basis;
+there is no guaranteed response time. Accepted reports are fixed in a new
+release and credited unless you ask otherwise.
