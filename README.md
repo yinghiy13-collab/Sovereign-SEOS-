@@ -55,7 +55,7 @@ cosign verify-blob \
   attestation.json
 
 sha256sum seos.py
-grep sha256 attestation.json
+grep '"sha256"' attestation.json
 ```
 
 Expected: `Verified OK`, and the two hashes match.
