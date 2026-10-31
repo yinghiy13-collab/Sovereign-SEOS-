@@ -2,11 +2,7 @@
 
 A small Python project with a CI pipeline that tests itself, signs a record of the result, and publishes that record with each release.
 
-[
-
 ![Sovereign SEOS Runner](https://github.com/yinghiy13-collab/Sovereign-SEOS-/actions/workflows/seos-runner.yml/badge.svg)
-
-](https://github.com/yinghiy13-collab/Sovereign-SEOS-/actions/workflows/seos-runner.yml)
 
 ## What the pipeline does
 
@@ -39,7 +35,7 @@ Release `v1.0.2` has no attestation. Use `v1.0.3` or later.
 
 ## Verify a release
 
-Requires [cosign](https://github.com/sigstore/cosign). Replace `v1.0.3` with the release you want.
+Requires [cosign](https://docs.sigstore.dev/cosign/installation/). Replace `v1.0.3` with the release you want.
 
 ```bash
 TAG=v1.0.3
@@ -56,14 +52,3 @@ cosign verify-blob \
 
 sha256sum seos.py
 grep '"sha256"' attestation.json
-```
-
-Expected: `Verified OK`, and the two hashes match.
-
-## Repository protections
-
-`main` is protected by a ruleset: pull request required, checks `run` and `Analyze (python)` must pass, branches must be up to date, force pushes and deletions blocked, and the bypass list is empty. Tags are not yet protected.
-
-## Security
-
-See [SECURITY.md](SECURITY.md).
