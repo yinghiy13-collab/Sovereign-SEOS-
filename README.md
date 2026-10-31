@@ -1,4 +1,4 @@
-# 🛡️ Sovereign SEOS (Software Engineering Operating System)
+
 
 ![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
 ![SLSA](https://img.shields.io/badge/SLSA-Track_3-blue)
