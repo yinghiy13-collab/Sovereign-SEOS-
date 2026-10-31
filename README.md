@@ -4,6 +4,8 @@ A small Python project with a CI pipeline that tests itself, signs a record of t
 
 [
 
+[
+
 ![Sovereign SEOS Runner](https://github.com/yinghiy13-collab/Sovereign-SEOS-/actions/workflows/seos-runner.yml/badge.svg)
 
 ](https://github.com/yinghiy13-collab/Sovereign-SEOS-/actions/workflows/seos-runner.yml)
