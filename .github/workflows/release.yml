@@ -40,7 +40,7 @@ jobs:
         run: python3 seos.py attest
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v3.5.0
+        uses: sigstore/cosign-installer@v4.1.2
 
       - name: Sign attestation (keyless)
         run: |
