@@ -68,7 +68,7 @@ jobs:
 
       - name: Native GitHub attestation
         if: ${{ !github.event.repository.private && github.event_name != 'pull_request' }}
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: 'attestation.json'
 
